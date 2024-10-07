@@ -1,4 +1,4 @@
-package com.sphenon.basics.message;
+package com.sphenon.basics.monitoring;
 
 /****************************************************************************
   Copyright 2001-2024 Sphenon GmbH
@@ -15,20 +15,29 @@ package com.sphenon.basics.message;
 *****************************************************************************/
 
 import com.sphenon.basics.context.*;
+import com.sphenon.basics.context.classes.*;
+import com.sphenon.basics.debug.*;
+import com.sphenon.basics.message.*;
 
-/** {@EntitySecurityClass User}
+import java.io.PrintStream;
 
-    @doclet {@Category Definition} {@SecurityClass User} {@Maturity Final}
-
-    Messages related to the application domain.
+/**
+   A {@link Problem} whose cause is explained.
 */
-public class ApplicationMessage extends Message {
-    protected ApplicationMessage (CallContext cc, MessageText text) {
-        super(cc, text);
+public class ProblemMessageText extends ProblemMessage {
+
+    public ProblemMessageText(CallContext context, MessageText message_text) {
+        super(context, null);
+        this.message_text = message_text;
     }
 
-    static public Message create (CallContext cc, MessageText text) {
-        return new ApplicationMessage(cc, text);
+    protected MessageText message_text;
+
+    public String getMessage (CallContext context) {
+        return this.message_text.getText(context);
+    }
+
+    public String toString() {
+        return this.message_text.getText(RootContext.getFallbackCallContext());
     }
 }
-

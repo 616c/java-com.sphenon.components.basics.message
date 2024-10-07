@@ -1,7 +1,7 @@
 package com.sphenon.basics.message.classes;
 
 /****************************************************************************
-  Copyright 2001-2018 Sphenon GmbH
+  Copyright 2001-2024 Sphenon GmbH
 
   Licensed under the Apache License, Version 2.0 (the "License"); you may not
   use this file except in compliance with the License. You may obtain a copy
@@ -59,5 +59,13 @@ abstract public class MessageTextOnDemand extends MessageText {
 
     public String getVariant_String_ (CallContext context, VariantSelectors variant_selectors) {
         return getMessageTextOnDemand(context).getVariant_String_(context, variant_selectors);
+    }
+
+    public String getVariant (CallContext context) {
+        return getVariant_String_(context);
+    }
+
+    public String getVariant (CallContext context, VariantSelectors variant_selectors) {
+        return getVariant_String_(context, variant_selectors);
     }
 }

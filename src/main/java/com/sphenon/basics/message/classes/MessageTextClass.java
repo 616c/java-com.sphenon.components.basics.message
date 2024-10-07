@@ -1,7 +1,7 @@
 package com.sphenon.basics.message.classes;
 
 /****************************************************************************
-  Copyright 2001-2018 Sphenon GmbH
+  Copyright 2001-2024 Sphenon GmbH
 
   Licensed under the Apache License, Version 2.0 (the "License"); you may not
   use this file except in compliance with the License. You may obtain a copy
@@ -21,6 +21,8 @@ import com.sphenon.basics.message.*;
 
 import java.util.regex.*;
 import java.util.List;
+import java.util.Set;
+import java.util.HashSet;
 
 public class MessageTextClass extends MessageText {
     protected String              text;
@@ -70,6 +72,13 @@ public class MessageTextClass extends MessageText {
         return this.getVariant_String_(context, variant_selectors, null);
     }
 
+    public String getVariant (CallContext context) {
+        return getVariant_String_(context);
+    }
+
+    public String getVariant (CallContext context, VariantSelectors variant_selectors) {
+        return getVariant_String_(context, variant_selectors);
+    }
 
     static public interface Encoder {
         public String encode(CallContext context, String text, String encoding);
@@ -141,7 +150,22 @@ public class MessageTextClass extends MessageText {
         return format(context, value, format);
     }
 
+    static protected Pattern pattern0;
     static protected Pattern pattern1;
+    static protected Pattern pattern2a;
+    static protected Pattern pattern2b;
+
+    static protected void initialise(CallContext context, String info) {
+        try {
+            pattern0  = Pattern.compile("(?s)%\\((?:([^\\)\\|]*)\\|)?(?:([^\\)\\|]*)\\|)?([^\\)\\|]+)(?:\\|([^\\)\\|]*))?\\)");
+            pattern1  = Pattern.compile("\\{([^\\}]*)\\}\\[([^\\]]*)\\]");
+            pattern2a = Pattern.compile("\"([^\"]*)\"");
+            pattern2b = Pattern.compile("'([^']*)'");
+        } catch (PatternSyntaxException pse) {
+            pse.printStackTrace();
+            throw new RuntimeException("internal error in MessageTextClass: " + pse.getMessage() + " (" + info + ")");
+        }
+    }
 
     public String getVariant_String_ (CallContext context, VariantSelectors variant_selectors, AttachmentHandler attachment_handler) {
         if (variative_text != null) {
@@ -165,8 +189,8 @@ public class MessageTextClass extends MessageText {
             // nothing to do
         } else {
             try {
-                Pattern pattern = Pattern.compile("(?s)%\\((?:([^\\)\\|]*)\\|)?(?:([^\\)\\|]*)\\|)?([^\\)\\|]+)(?:\\|([^\\)\\|]*))?\\)");
-                Matcher matcher = pattern.matcher(this.text);
+                if (pattern0 == null) { initialise(context, "while processing: " + this.text); }
+                Matcher matcher = pattern0.matcher(this.text);
                 boolean first_nonempty = true;
                 StringBuffer sb = new StringBuffer();
                 while (matcher.find()) {
@@ -204,9 +228,7 @@ public class MessageTextClass extends MessageText {
                             }
                         }
                     } else {
-                        if (pattern1 == null) {
-                            pattern1 = Pattern.compile("\\{([^\\}]*)\\}\\[([^\\]]*)\\]");
-                        }
+                        if (pattern1 == null) { initialise(context, "while processing: " + this.text); }
                         Matcher matcher1;
                         if ((matcher1 = pattern1.matcher(name)).matches() == false) {
                             value = "[invalid message parameter syntax: '" + name + "']";
@@ -227,8 +249,8 @@ public class MessageTextClass extends MessageText {
                                         value = "[selection list starts with invalid delimiter: " + deli + " ]";
                                         System.err.println("precondition violation in MessageTextClass: selection list starts with invalid delimiter: " + deli);
                                     } else {
-                                        Pattern pattern2 = Pattern.compile("" + deli + "([^" + deli + "]*)" + deli);
-                                        Matcher matcher2 = pattern2.matcher(selection);
+                                        if (pattern2a == null || pattern2b == null) { initialise(context, "while processing: " + this.text); }
+                                        Matcher matcher2 = (deli == '"' ? pattern2a : pattern2b).matcher(selection);
 
                                         boolean found = false;
                                         int idx = 0;
@@ -295,6 +317,21 @@ public class MessageTextClass extends MessageText {
         }
 
         return this.text;
+    }
+
+    static public Set<String> getAttributesInMessageTemplate(CallContext context, String message_template) {
+        Set<String> attributes = new HashSet<String>(2);
+        if (pattern0 == null) { initialise(context, "while processing: " + message_template); }
+        Matcher matcher = pattern0.matcher(message_template);
+        while (matcher.find()) {
+            String name     = matcher.group(3);
+            int pos = name.indexOf('%');
+            if (pos != -1) {
+                name = name.substring(0, pos);
+            }
+            attributes.add(name);
+        }
+        return attributes;
     }
 
     protected MessageTextClass (CallContext cc, String text, Variative_String_ variative_text, Object[][] old_attributes, Object... attributes) {
